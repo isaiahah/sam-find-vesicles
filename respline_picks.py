@@ -47,7 +47,7 @@ for input_file in input_dir_files:
     # Generate a spline through the points
     tck, u = splprep([points[:, 0], points[:, 1]], k=3)
     spline = splev(np.linspace(0, 1.0, spline_density), tck)
-    spline = np.round(spline).astype(int)
+    spline = np.round(spline).astype(int).T
     
     # Save spline points to file
     spline_dir = Path(spline_dir)
