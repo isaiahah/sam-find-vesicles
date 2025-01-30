@@ -18,7 +18,7 @@ parser.add_argument(
 parser.add_argument(
     "--spline_density",
     type=int,
-    default=1000,
+    default=20000,
     help="Number of points to pick from each spline fit to a vesicle"
 )
 parser.add_argument(
@@ -45,9 +45,13 @@ for input_file in input_dir_files:
                                points[:, 0] - np.mean(points[:, 0]))
     points = points[np.argsort(points_angles), :]
     # Generate a spline through the points
-    tck, u = splprep([points[:, 0], points[:, 1]], k=3)
+    try:
+        tck, u = splprep([points[:, 0], points[:, 1]], k=3)
+    except Exception as e:
+        print(f"File {input_file.name} has error {e}")
+    
     spline = splev(np.linspace(0, 1.0, spline_density), tck)
-    spline = np.round(spline).astype(int).T
+    spline = np.unique(np.round(spline).astype(int).T, axis=0)
     
     # Save spline points to file
     spline_dir = Path(spline_dir)

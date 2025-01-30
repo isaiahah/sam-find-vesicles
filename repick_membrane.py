@@ -221,7 +221,7 @@ parser.add_argument(
 parser.add_argument(
     "--spline_density",
     type=int,
-    default=1000,
+    default=20000,
     help="Number of points to pick from each spline fit to a vesicle"
 )
 parser.add_argument(
@@ -437,18 +437,20 @@ for micrograph in tqdm(micrographs[0:]):
                     continue
 
                 if support_separation != -1:
-                    spline_supported = set()
+                    spline_supported = []
                     for arc in supports:
-                        idx1 = np.argmin((spline[0] - p_x[arc[0]]) ** 2 + (spline[1] - p_y[arc[0]]) ** 2)
-                        idx2 = np.argmin((spline[0] - p_x[arc[1]]) ** 2 + (spline[1] - p_y[arc[1]]) ** 2)
+                        idx1 = np.argmin((spline[:, 0] - p_x[arc[0]]) ** 2 + (spline[:, 1] - p_y[arc[0]]) ** 2)
+                        idx2 = np.argmin((spline[:, 0] - p_x[arc[1]]) ** 2 + (spline[:, 1] - p_y[arc[1]]) ** 2)
                         # PRECONDITION: Points returned counterclockwise, so should have idx1 < idx2
-                        if idx1 == spline_density - 1:
+                        if idx1 == spline.shape[0] - 1:
                             idx1 = 0
                         if idx2 == 0:
-                            idx2 = spline_density - 1
-                        spline_supported.update((round(spline[0][j]), round(spline[1][j])) for j in range(min(idx1, idx2), max(idx1, idx2) + 1))
+                            idx2 = spline.shape[0] - 1
+                        for j in range(min(idx1, idx2), max(idx1, idx2) + 1):
+                            spline_supported.append(spline[j])
+                    spline_supported = np.array(spline_supported)
                 else: # Include full spline
-                    spline_supported = set((round(spline[0][i]), round(spline[1][i])) for i in range(len(spline[0])))
+                    spline_supported = spline
                 splines.append(spline_supported)
     t_fit_splines += (time.time() - t)
 
@@ -456,9 +458,9 @@ for micrograph in tqdm(micrographs[0:]):
     if spline_dir is not None:
         spline_dir = Path(spline_dir)
         for i in range(len(splines)//3):
-            np.save(spline_dir / f"{uid}_vesicle_{i}_inner.npy", np.array(list(splines[3 * i + 0])))
-            np.save(spline_dir / f"{uid}_vesicle_{i}_intermembrane.npy", np.array(list(splines[3 * i + 1])))
-            np.save(spline_dir / f"{uid}_vesicle_{i}_outer.npy", np.array(list(splines[3 * i + 2])))
+            np.save(spline_dir / f"{uid}_vesicle_{i}_inner.npy", splines[3 * i + 0])
+            np.save(spline_dir / f"{uid}_vesicle_{i}_intermembrane.npy", splines[3 * i + 1])
+            np.save(spline_dir / f"{uid}_vesicle_{i}_outer.npy", splines[3 * i + 2])
 
     # Record final pick indices
     pick_indices = (np.array([particle[1] for spline in splines for particle in spline]),
